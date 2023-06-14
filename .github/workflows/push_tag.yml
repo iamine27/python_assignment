@@ -1,0 +1,32 @@
+name: Push Tag.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    outputs:
+      tag:
+        value: ${{ jobs.push_tag.outputs.tag }}
+
+jobs:
+  push_tag:
+    outputs:
+      tag: ${{ steps.tag_and_push.outputs.tag }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - id: which_branch
+        run: |
+          echo "branch: ${{ github.ref }}"
+      - name: set git credentials
+        run: |
+          git config --global user.email "you@example.com"
+          git config --global user.name "Your Name"
+      - id: tag_and_push
+        run: | 
+          git tag -f -a ${{ inputs.tag }} -m "auto created tag"
+          git push -f origin ${{ inputs.tag }}
+          tag=$(echo "${{ inputs.tag }}")
+          echo "::set-output name=tag::${tag}"

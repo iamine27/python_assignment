@@ -1,0 +1,8 @@
+version: "3"
+
+tasks:
+  format_code:
+    cmds:
+      - echo "Running code formatting for $PACKAGE and tests"
+      - black $PACKAGE tests
+      - isort $PACKAGE tests

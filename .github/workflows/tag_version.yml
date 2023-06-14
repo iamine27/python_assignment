@@ -1,0 +1,64 @@
+name: Generate Tag Version.
+
+on:
+  workflow_call:
+    outputs:
+      tag:
+        description: "Tag version depending on the branch."
+        value: ${{ jobs.git_tag_version.outputs.version }}
+
+jobs:
+  create_feat_branch_tag_version:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      feat_branch_tag: ${{ steps.tag_version.outputs.feat_branch_tag }}
+    steps:
+      - name: branch name
+        run: |
+          echo branch: ${{ github.ref }}
+      - uses: actions/checkout@v3
+      - id: tag_version
+        run: |
+          echo "${{ github.ref }}" | cut -d '-' -f 2
+          number=$(echo "${{ github.ref }}" | cut -d '-' -f 2)
+          tag_name=v0.0.dev$number
+          echo "::set-output name=feat_branch_tag::${tag_name}"
+
+  create_main_branch_tag_version:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      main_branch_tag: v${{ steps.version.outputs.version }}
+    steps:
+      - name: branch name
+        run: |
+          echo branch: ${{ github.ref }}
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Generate version
+        id: version
+        uses: paulhatch/semantic-version@master
+        with:
+          tag_prefix: "v"
+          major_pattern: "(breaking)"
+          minor_pattern: "(feature)"
+          version_format: "${major}.${minor}.${patch}"
+          bump_each_commit: true
+
+  git_tag_version:
+    needs: [create_feat_branch_tag_version, create_main_branch_tag_version]
+    if: ${{ always() && contains(needs.*.result, 'success') && !(contains(needs.*.result, 'failure')) }}
+    outputs:
+      version: ${{ steps.version.outputs.tag_version }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: version
+        run: |
+          feature_branch_tag="${{ needs.create_feat_branch_tag_version.outputs.feat_branch_tag }}"
+          main_branch_tag="${{ needs.create_main_branch_tag_version.outputs.main_branch_tag }}"
+          version=${feature_branch_tag}${main_branch_tag}
+          echo $version
+          echo "::set-output name=tag_version::${version}"

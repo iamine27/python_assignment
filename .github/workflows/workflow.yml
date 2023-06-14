@@ -1,0 +1,29 @@
+name: CI/CD Workflow.
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+
+  tests_and_linters:
+    uses: ./.github/workflows/code_checks.yml
+
+  tag_version:
+    uses: ./.github/workflows/tag_version.yml
+    needs: tests_and_linters
+
+  push_tag:
+    needs: tag_version
+    uses: ./.github/workflows/push_tag.yml
+    with:
+      tag: ${{ needs.tag_version.outputs.tag }}
+
+  upload_package:
+    needs: push_tag
+    uses: ./.github/workflows/upload_package.yml
+    secrets:
+      pypi_pwd: ${{ secrets.PYPI_PWD }}
+    with:
+      tag: ${{ needs.push_tag.outputs.tag }}

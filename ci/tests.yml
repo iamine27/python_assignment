@@ -1,0 +1,21 @@
+
+version: "3"
+
+tasks:
+  run_pytest:
+    cmds:
+      - pytest --cov=$PACKAGE --cov-append --cov-report term-missing --cov-branch
+
+  check_coverage:
+    vars:
+      COVERAGE:
+        sh: coverage report -m | grep -oP "TOTAL\s+(\d+\s+){4}\K(\d+)(?=%)"
+      MIN_COVERAGE: $MIN_REQUESTED_COVERAGE
+    cmds:
+      - echo test coverage is {{ .COVERAGE }}%.
+      - if [[ {{ .COVERAGE }} -le {{ .MIN_COVERAGE }} ]];
+          then echo "test coverage is {{ .COVERAGE }}%, but required {{ .MIN_COVERAGE }}%".;
+          exit 1;
+        else
+          echo "COVERAGE OK - {{ .COVERAGE }}% (>= {{ .MIN_COVERAGE }}%).";
+        fi;

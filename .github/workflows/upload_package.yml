@@ -1,0 +1,40 @@
+name: Upload Package.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    secrets:
+      pypi_pwd:
+        required: true
+
+
+jobs:
+  build_package_from_tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: arduino/setup-task@v1
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.1.13
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: bump version
+        run: | 
+          echo "tag ${{ inputs.tag }}"
+          poetry version ${{ inputs.tag }}
+      - name: Install dependencies.
+        run: task init
+      - name: Build Package.
+        run: poetry build
+      - name: Upload Package.
+        run: |
+          poetry config repositories.shippeo https://pypiserver.shippeo.io/
+          poetry config http-basic.shippeo pythonista ${{ secrets.pypi_pwd }}
+          poetry publish -r shippeo
